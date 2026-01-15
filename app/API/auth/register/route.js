@@ -1,5 +1,6 @@
 import { getPool, sql } from "@/lib/db";
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs"; // <--- 1. NUEVO: Importar bcrypt
 
 export async function POST(request) {
   try {
@@ -18,12 +19,16 @@ export async function POST(request) {
       );
     }
 
-    // 2. Insertar el nuevo usuario
-    // NOTA: En un proyecto real, usa 'bcrypt' para encriptar la contraseña antes de este paso
+    // 2. Encriptar la contraseña <--- 2. NUEVO
+    // El "10" es el costo de procesamiento (salt rounds)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 3. Insertar el nuevo usuario usando la contraseña encriptada
     await pool.request()
       .input("nombre", sql.VarChar, nombre)
       .input("email", sql.VarChar, email)
-      .input("password", sql.VarChar, password)
+      .input("password", sql.VarChar, hashedPassword) // <--- 3. NUEVO: Usar hashedPassword
       .query("INSERT INTO Usuarios (nombre, email, password) VALUES (@nombre, @email, @password)");
 
     return NextResponse.json({ message: "Usuario creado con éxito" }, { status: 201 });
